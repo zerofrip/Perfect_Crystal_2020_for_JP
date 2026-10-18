@@ -1,0 +1,93 @@
+# Perfect Crystal 2020 Japanese port — source-only publication ignore rules.
+# Never track ROMs, patches, binaries, generated disassemblies, third-party
+# source trees, or local inputs.
+
+# ROM / patch / save / state / RTC
+*.gb
+*.gbc
+*.sgb
+*.sav
+*.ram
+*.rtc
+*.ips
+*.bps
+*.patch
+*.diff
+*.state
+
+# Object / link / map outputs from RGBDS
+*.o
+*.obj
+*.sym
+*.map
+
+# Generated disassemblies and tables.  The authored hook source is the only
+# exception.
+*.asm
+!work/hall_decorations_hook.asm
+work/*_pokemontools.asm
+work/*_actual.asm
+work/expected_*.asm
+work/clockreset_*.asm
+work/*.txt
+work/*.png
+
+# Generated JSON dumps (verification results, ranges, evidence)
+work/*.json
+
+# Release / packaging outputs
+work/release/
+
+# Third-party source trees and tools (must be obtained separately).
+# These patterns are unanchored so they match at the workspace root or nested.
+pokekuristaru/
+perfect_crystal_source/
+lazy_ips/
+pokemon-reverse-engineering-tools/
+gb-asm-tools/
+pokecrystal/
+rgbds-*/
+ghidra_*_PUBLIC/
+ghidra_projects/
+pyboy_venv/
+
+# Audio / image / binary assets
+*.png
+*.jpg
+*.jpeg
+*.bmp
+*.gif
+*.wav
+*.mp3
+*.ogg
+*.bin
+
+# Archive / compressed files
+*.zip
+*.7z
+*.tar
+*.gz
+*.bz2
+*.xz
+
+# Python and virtualenv artifacts
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+venv/
+env/
+*.egg-info/
+
+# Editor / OS metadata
+.DS_Store
+*~
+*.swp
+.vscode/
+.idea/
+
+# Local secrets or workspace configuration
+.env
+*.key
+*.pem
+secrets/

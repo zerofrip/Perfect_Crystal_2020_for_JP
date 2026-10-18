@@ -1,0 +1,9 @@
+# Python dependencies for Perfect Crystal 2020 Japanese port tools.
+# The core builder only requires the Python standard library plus local
+# checkouts of lazy_ips and pokemon-reverse-engineering-tools (see
+# docs/DEPENDENCIES.md).  pokemontools is not on PyPI.
+
+# Emulator-based CPU tests (optional).  Verified locally with Python 3.14.4;
+# Pillow requires Python >= 3.11.
+pyboy==2.8.1
+Pillow==13.0.0
