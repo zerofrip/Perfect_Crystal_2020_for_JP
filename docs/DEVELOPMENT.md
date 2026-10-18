@@ -29,7 +29,7 @@ python3 work/build_partial_jp_patch.py
 - `work/development_only_jp_partial.gbc`
 - `work/development_only_jp_partial.ips`
 - 各種 `work/*_ranges.json`
-- `work/rc1_reference.gbc`、`work/rc2_reference.gbc`
+- `work/rc1_reference.gbc`、`work/rc2_reference.gbc`、`work/rc3_reference.gbc`
 
 ## パッケージング
 
@@ -55,19 +55,32 @@ python3 work/apply_jp_patch.py \
 
 主要な検証項目：
 
-- `verify_partial_jp_patch.py` — 開発用 ROM のアンカーと SHA-256
+- `verify_partial_jp_patch.py` — RC3 基盤と RC4 修正層の両方を検証
+- `verify_rc4_delta.py` — RC3 からの限定した変更範囲
 - `verify_cerulean_cave.py` — ハナダの洞窟のマップ/イベント/テキスト
 - `verify_gs_ball_binary.py` — ジーエスボールイベントの分岐
 - `verify_red_rewards_binary.py` — レッド戦後の装飾品フラグ
+- `verify_trainer_binary.py`、`compare_red.py` — レッドを含むトレーナー改変
+- `audit_encounter_tables.py` — RC4 野生出現率の検証
 - `verify_requested_fixes.py` — RC2 要求修正（ムーンボール、りゅうのキバ、コイキング長さ、2段階能力低下）
 - `verify_held_item_stat_cap.py` — RC3 持ち物ステータス上限修正
 - `verify_gym_rematches.py`、`verify_dialogue_updates.py`、`verify_remaining_features.py` — ジム再戦/テキスト/その他機能
+- `verify_rc4_cpu_reports.py` — Hall フックの Hall/非 Hall/繰り返し 3 モード CPU 検証
+
+ドキュメント生成：
+
+```bash
+python3 work/document_perfect_changes.py
+```
+
+このスクリプトは `work/PORTING_STATUS.md` と `work/README_JP.md` を現在の RC4 ROM から再生成します。
 
 ## 既知の制限
 
 - 実機での動作確認は行われていません。
 - 全ストーリー最初から最後までのプレイスルー検証は行われていません。
-- 歴史的検証実績：RC3 CPU 6245 件 + RC2 参照 24 件 + 独立 smoke 7 件
+- 歴史的検証実績：RC2 CPU 参照 24 件、RC3 CPU 6245 件 + 独立 smoke 7 件
+- RC4 新規 CPU 検証：Hall フック 3 モード
 
 ## 環境変数まとめ
 

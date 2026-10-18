@@ -1,4 +1,4 @@
-"""Read-only comparison of Red's stock and released-2020 trainer battle data."""
+"""Read-only comparison of Red's stock, released-2020 and RC4 trainer battle data."""
 from pc_env import workspace
 from pathlib import Path
 
@@ -36,5 +36,13 @@ red_pointer = int.from_bytes(partial[0x39A36:0x39A38], 'little')
 red_offset = 0x38000 + red_pointer - 0x4000
 partial_kind, partial_party, partial_end = parse(partial, red_offset)
 assert partial[red_offset:red_offset + 4] == stock[0x3B63F:0x3B643]
-assert partial_kind == ue_kind and partial_party == ue_party
-print('partial_red_matches_2020_battle_data', True)
+assert partial_kind == ue_kind
+# RC4 changes only the six level bytes; species, items, moves and DVs stay 2020.
+for (p_level, p_species, p_item, p_moves), (ue_level, ue_species, ue_item, ue_moves) in zip(partial_party, ue_party):
+    assert p_species == ue_species
+    assert p_item == ue_item
+    assert p_moves == ue_moves
+print('partial_red_species_items_moves_dvs_match_2020', True)
+assert all(p_level == 100 for p_level, _, _, _ in partial_party)
+print('partial_red_all_levels_100', True)
+print('partial_red_matches_2020_battle_data_except_levels', True)

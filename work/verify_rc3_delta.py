@@ -2,6 +2,7 @@
 from hashlib import sha256
 import json
 from pathlib import Path
+import sys
 
 from pc_env import workspace
 from fix_held_item_stat_cap import apply_held_item_stat_cap_fix
@@ -13,7 +14,8 @@ assert sha256(baseline).hexdigest()=='96b08ba49bc42096b2156a6795c86f1b47f40afe87
 stock=(ROOT/'Pocket Monsters - Crystal Version (Japan).gbc').read_bytes()
 english=(ROOT/'Pokemon - Crystal Version (UE) (V1.1) [C][!].gbc').read_bytes()
 reference=(WORK/'perfect_crystal_ue_patched.gbc').read_bytes()
-actual=(WORK/'development_only_jp_partial.gbc').read_bytes()
+rom_arg = Path(sys.argv[1]) if len(sys.argv) == 2 else WORK / 'development_only_jp_partial.gbc'
+actual = rom_arg.read_bytes()
 expected=bytearray(baseline)
 ranges=apply_held_item_stat_cap_fix(stock,english,reference,expected)
 expected[0x14D]=(-sum(expected[0x134:0x14D])-25)&255

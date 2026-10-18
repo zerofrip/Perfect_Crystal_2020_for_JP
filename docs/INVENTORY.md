@@ -4,12 +4,12 @@
 
 | カテゴリ | 件数 | 説明 |
 |----------|------|------|
-| Python ビルド/ポート/修正/検証/調査スクリプト | 153 件 | 元の `work/*.py` |
+| Python ビルド/ポート/修正/検証/調査スクリプト | 156 件 | 元の `work/*.py` + `work/apply_rc4_corrections.py`, `work/verify_rc4_delta.py`, `work/verify_rc4_cpu_reports.py` |
 | 新規 Python ヘルパー | 2 件 | `work/pc_env.py`（ワークスペース解決）、`work/prepare_pokemontools.py`（pokemontools 互換性修正） |
 | 新規ビルドスクリプト | 1 件 | `work/build_hall_hook.sh` |
 | Ghidra スクリプト | 5 件 | `work/ghidra_scripts/*.java` |
 | RGBDS フック ASM | 1 件 | `work/hall_decorations_hook.asm` |
-| **合計** | **162 件** | ソースのみ |
+| **合計** | **165 件** | ソースのみ |
 
 ## 意図的に移行しなかったファイル
 
@@ -32,6 +32,7 @@
 
 ```
 work/apply_jp_patch.py
+work/apply_rc4_corrections.py
 work/archive_rc1_release.py
 work/archive_rc2_release.py
 work/audit_base_stats.py
@@ -184,6 +185,8 @@ work/verify_rc2_release.py
 work/verify_rc3_cpu_reports.py
 work/verify_rc3_delta.py
 work/verify_rc3_release.py
+work/verify_rc4_cpu_reports.py
+work/verify_rc4_delta.py
 work/verify_red_rewards_binary.py
 work/verify_remaining_cpu.py
 work/verify_remaining_features.py

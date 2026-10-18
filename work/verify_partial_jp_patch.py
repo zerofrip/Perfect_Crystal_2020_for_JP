@@ -1,7 +1,13 @@
-"""Check the local development patch's hashes, checksums and change ranges."""
+"""Check the local development patch's hashes, checksums and change ranges.
+
+RC4 is verified as a narrow delta on top of the exact RC3 snapshot.  The RC3
+verification is retained unchanged against the hash-gated rc3_reference.gbc
+file; the current ROM is then compared to the RC3 baseline plus the RC4
+correction layer.
+"""
 from pc_env import workspace
 from pathlib import Path
-from hashlib import sha1
+from hashlib import sha1, sha256
 from trainer_party_layout import rebuilt_2020_japanese_trainers
 
 root = workspace()
@@ -9,8 +15,12 @@ stock = (root / "Pocket Monsters - Crystal Version (Japan).gbc").read_bytes()
 patched = (root / "work/development_only_jp_partial.gbc").read_bytes()
 english = (root / "Pokemon - Crystal Version (UE) (V1.1) [C][!].gbc").read_bytes()
 reference = (root / "work/perfect_crystal_ue_patched.gbc").read_bytes()
+rc3_reference = (root / "work/rc3_reference.gbc").read_bytes()
 assert sha1(stock).hexdigest() == "95127b901bbce2407daf43cce9f45d4c27ef635d"
-assert len(stock) == len(patched) == 2 * 1024 * 1024
+assert sha256(rc3_reference).hexdigest() == "b6f6b73dc7e6d8f4d3223b398fb1202519efae0c0e36959ab7ac43cb8e5a4c21"
+assert len(stock) == len(patched) == len(rc3_reference) == 2 * 1024 * 1024
+
+# Current ROM checksums must be valid.
 header = (-sum(patched[0x134:0x14D]) - 25) & 0xFF
 global_checksum = (sum(patched) - patched[0x14E] - patched[0x14F]) & 0xFFFF
 assert patched[0x14D] == header
@@ -76,6 +86,10 @@ allowed = [
     (0x180000, 0x8000),
     (0x14D, 3),
 ]
+
+# Verify original RC3 feature ranges against the stored, hash-gated reference.
+# These are the original RC3 checks; the current ROM is verified separately as
+# the RC3 baseline plus the narrow RC4 correction layer.
 trainer_pointers, trainer_data, changed_trainers = rebuilt_2020_japanese_trainers(
     stock, english, reference
 )
@@ -101,22 +115,36 @@ for offset, before, after in (
 ):
     assert stock[offset:offset+3] == bytes.fromhex(before)
     probe[offset:offset+3] = bytes.fromhex(after)
-    assert patched[offset:offset+3] == probe[offset:offset+3]
+    assert rc3_reference[offset:offset+3] == probe[offset:offset+3]
 feature_ranges = []
-for feature in (apply_clock_reset, apply_battle_bugfixes, apply_gym_rematches, apply_misc_fixes, apply_restored_sprites, apply_dialogue_updates, apply_item_attributes, apply_remaining_features, apply_requested_fixes, apply_held_item_stat_cap_fix):
+for feature in (apply_clock_reset, apply_battle_bugfixes, apply_gym_rematches, apply_misc_fixes,
+                apply_restored_sprites, apply_dialogue_updates, apply_item_attributes,
+                apply_remaining_features, apply_requested_fixes, apply_held_item_stat_cap_fix):
     for start, size, label in feature(stock, english, reference, probe):
         allowed.append((start, size))
         feature_ranges.append((start, size, label))
-# Compare after layering the four requested corrections; preserve checks for
-# every byte of the original features, including overlapping correction sites.
 for start, size, label in feature_ranges:
-    assert patched[start:start+size] == probe[start:start+size], label
+    assert rc3_reference[start:start + size] == probe[start:start + size], label
 assert changed_trainers == 212
-assert patched[0x399BA:0x39A40] == trainer_pointers
-assert patched[0x39A40:0x39A40 + len(trainer_data)] == trainer_data
+assert rc3_reference[0x399BA:0x39A40] == trainer_pointers
+assert rc3_reference[0x39A40:0x39A40 + len(trainer_data)] == trainer_data
+print("rc3_reference_feature_bytes_verified", True)
+
+# Now verify the current ROM is exactly the RC3 baseline plus the RC4 layer.
+from apply_rc4_corrections import apply_rc4_corrections
+expected = bytearray(rc3_reference)
+rc4_ranges = apply_rc4_corrections(stock, english, reference, expected)
+expected[0x14D] = (-sum(expected[0x134:0x14D]) - 25) & 0xFF
+expected_checksum = (sum(expected) - expected[0x14E] - expected[0x14F]) & 0xFFFF
+expected[0x14E:0x150] = expected_checksum.to_bytes(2, "big")
+assert patched == expected, "RC4 ROM does not match RC3 baseline + RC4 corrections"
+for start, size, label in rc4_ranges:
+    allowed.append((start, size))
+
 changed = [i for i, (a, b) in enumerate(zip(stock, patched)) if a != b]
 assert all(any(start <= i < start + size for start, size in allowed) for i in changed)
 print("header_checksum_ok", True)
 print("global_checksum_ok", True)
 print("changed_bytes", len(changed))
 print("outside_allowed_ranges", 0)
+print("rc4_correction_ranges", len(rc4_ranges))

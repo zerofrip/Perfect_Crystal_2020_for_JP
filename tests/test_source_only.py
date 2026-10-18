@@ -310,6 +310,118 @@ class TestSourceOnly(unittest.TestCase):
             self.assertIn('work/generated.asm', offenders['raw_asm'])
             self.assertNotIn('work/hall_decorations_hook.asm', offenders['raw_asm'])
 
+    def test_rc4_hall_flag_math(self):
+        """Hall flags sum to 42 total, 41 actual items, with one poster flag."""
+        sys.path.insert(0, str(WORK_DIR))
+        try:
+            from apply_rc4_corrections import apply_hall_hook_correction
+        finally:
+            sys.path.pop(0)
+        red_only = {0x2B9, 0x2BC, 0x2CD, 0x2CF}
+        hall = set(range(0x2A4, 0x2D2)) - red_only
+        poster = {0x2CC}
+        items = hall - poster
+        self.assertEqual(len(hall), 42)
+        self.assertEqual(len(items), 41)
+        self.assertIn(0x2B7, items)
+        self.assertNotIn(0x2B7, red_only)
+
+    def test_rc4_slot_weights_sum_to_100(self):
+        """Johto grass slot weights represent a complete probability distribution."""
+        sys.path.insert(0, str(WORK_DIR))
+        try:
+            from apply_rc4_corrections import SLOT_WEIGHTS
+        finally:
+            sys.path.pop(0)
+        self.assertEqual(sum(SLOT_WEIGHTS), 100)
+
+    def test_rc4_encounter_correction_asserts_on_wrong_baseline(self):
+        """apply_encounter_corrections rejects a wrong baseline without mutation."""
+        sys.path.insert(0, str(WORK_DIR))
+        try:
+            from apply_rc4_corrections import (
+                apply_encounter_corrections, JOHTO_GRASS_START, RECORD_WIDTH,
+                _UNION_CAVE_B1F, _WHIRL_ISLAND_LUGIA, _DARK_CAVE_VIOLET,
+                _ROUTE_31, _ROUTE_32,
+            )
+        finally:
+            sys.path.pop(0)
+        size = JOHTO_GRASS_START + 61 * RECORD_WIDTH + 16
+        candidate = bytearray(size)
+        record_start, map_id = _UNION_CAVE_B1F
+        candidate[record_start:record_start + 2] = map_id
+        candidate[record_start + 5:record_start + 19] = bytes([8, 74, 6, 41, 8, 41, 8, 95, 6, 7, 8, 19, 8, 20])  # wrong last slot
+        original = bytes(candidate)
+        with self.assertRaises(AssertionError):
+            apply_encounter_corrections(candidate)
+        self.assertEqual(bytes(candidate), original)
+
+    def test_rc4_encounter_correction_probabilities(self):
+        """apply_encounter_corrections produces the exact RC4 target probabilities."""
+        sys.path.insert(0, str(WORK_DIR))
+        try:
+            from apply_rc4_corrections import (
+                apply_encounter_corrections, _percentages, RECORD_WIDTH,
+                _UNION_CAVE_B1F, _WHIRL_ISLAND_LUGIA, _DARK_CAVE_VIOLET,
+                _ROUTE_31, _ROUTE_32, _period_offset,
+            )
+        finally:
+            sys.path.pop(0)
+        size = max(_UNION_CAVE_B1F[0], _WHIRL_ISLAND_LUGIA[0], _DARK_CAVE_VIOLET[0],
+                   _ROUTE_31[0], _ROUTE_32[0]) + RECORD_WIDTH + 16
+        candidate = bytearray(size)
+        fixtures = [
+            (_UNION_CAVE_B1F, 0, [8, 74, 6, 41, 8, 41, 8, 95, 6, 7, 8, 19, 8, 19]),
+            (_UNION_CAVE_B1F, 1, [8, 74, 6, 41, 8, 41, 8, 95, 6, 7, 8, 19, 8, 19]),
+            (_WHIRL_ISLAND_LUGIA, 2, [25, 98, 26, 41, 25, 98, 27, 98, 28, 42, 27, 140, 27, 140]),
+            (_DARK_CAVE_VIOLET, 2, [3, 74, 2, 155, 2, 74, 4, 74, 2, 41, 4, 206, 4, 155]),
+            (_ROUTE_31, 0, [0, 0, 0, 0, 0, 0, 5, 152, 0, 0, 0, 0, 0, 0]),
+            (_ROUTE_32, 1, [4, 23, 5, 19, 7, 69, 6, 179, 7, 16, 7, 158, 7, 187]),
+        ]
+        for (record_start, map_id), period, slots in fixtures:
+            candidate[record_start:record_start + 2] = map_id
+            base = _period_offset(record_start, period)
+            candidate[base:base + 14] = bytes(slots)
+        apply_encounter_corrections(candidate)
+        union_morning = _percentages(candidate[_period_offset(_UNION_CAVE_B1F[0], 0):_period_offset(_UNION_CAVE_B1F[0], 0) + 14])
+        self.assertEqual(union_morning.get((7, 6)), 10)
+        self.assertEqual(union_morning.get((95, 8)), 5)
+        union_day = _percentages(candidate[_period_offset(_UNION_CAVE_B1F[0], 1):_period_offset(_UNION_CAVE_B1F[0], 1) + 14])
+        self.assertEqual(union_day.get((7, 6)), 10)
+        self.assertEqual(union_day.get((95, 8)), 5)
+        # Period 2 (night) was zero-filled and untouched; snapshot it to prove no mutation.
+        union_night = candidate[_period_offset(_UNION_CAVE_B1F[0], 2):_period_offset(_UNION_CAVE_B1F[0], 2) + 14]
+        self.assertEqual(union_night, bytes(14))
+        whirl = _percentages(candidate[_period_offset(_WHIRL_ISLAND_LUGIA[0], 2):_period_offset(_WHIRL_ISLAND_LUGIA[0], 2) + 14])
+        self.assertEqual(whirl.get((140, 27)), 10)
+        self.assertEqual(whirl.get((98, 27)), 5)
+        dark = _percentages(candidate[_period_offset(_DARK_CAVE_VIOLET[0], 2):_period_offset(_DARK_CAVE_VIOLET[0], 2) + 14])
+        self.assertEqual(dark.get((155, 2)), 30)
+        self.assertEqual(dark.get((155, 4)), 10)
+        route31 = _percentages(candidate[_period_offset(_ROUTE_31[0], 0):_period_offset(_ROUTE_31[0], 0) + 14])
+        self.assertEqual(route31.get((152, 5)), 10)
+        route32 = _percentages(candidate[_period_offset(_ROUTE_32[0], 1):_period_offset(_ROUTE_32[0], 1) + 14])
+        self.assertEqual(route32.get((158, 7)), 20)
+        self.assertEqual(route32.get((69, 7)), 4)
+
+    def test_rc4_hall_hook_nops_skip(self):
+        """apply_hall_hook_correction NOPs the cp $b7 / jr z skip without moving branches."""
+        sys.path.insert(0, str(WORK_DIR))
+        try:
+            from apply_rc4_corrections import (
+                apply_hall_hook_correction, HALL_HOOK_START, HALL_HOOK_SIZE,
+            )
+        finally:
+            sys.path.pop(0)
+        size = HALL_HOOK_START + HALL_HOOK_SIZE + 16
+        candidate = bytearray(size)
+        # Valid hook header and footer; the bytes between are irrelevant to the guard.
+        candidate[HALL_HOOK_START:HALL_HOOK_START + 4] = bytes.fromhex('7aa72036')
+        candidate[HALL_HOOK_START + HALL_HOOK_SIZE - 3:HALL_HOOK_START + HALL_HOOK_SIZE] = bytes.fromhex('c3412e')
+        candidate[HALL_HOOK_START + 20:HALL_HOOK_START + 24] = bytes.fromhex('feb72817')
+        apply_hall_hook_correction(candidate)
+        self.assertEqual(candidate[HALL_HOOK_START + 20:HALL_HOOK_START + 24], bytes(4))
+
 
 if __name__ == '__main__':
     unittest.main()

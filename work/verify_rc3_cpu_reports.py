@@ -1,18 +1,27 @@
-"""Validate held-item CPU evidence against the exact integrated RC3 ROM."""
+"""Validate held-item CPU evidence against the exact integrated RC3 ROM.
+
+Optionally pass a ROM path to verify a historical RC3 snapshot; the default is
+work/rc3_reference.gbc so this script stays usable after RC4 development builds.
+"""
 from hashlib import sha256
 import json
+import sys
 from pathlib import Path
 
 from pc_env import workspace
 from verify_held_item_stat_cap_cpu import cases, damage_oracle
 
 WORK = workspace() / 'work'
-digest = sha256((WORK / 'development_only_jp_partial.gbc').read_bytes()).hexdigest()
-baseline = sha256((WORK / 'rc2_reference.gbc').read_bytes()).hexdigest()
-assert baseline == '96b08ba49bc42096b2156a6795c86f1b47f40afe8786a6569da764d8c493163c'
+ROOT = workspace()
 
 def read(name):
     return json.loads((WORK / name).read_text())
+
+rom_arg = Path(sys.argv[1]) if len(sys.argv) == 2 else WORK / 'rc3_reference.gbc'
+rom = rom_arg.read_bytes()
+digest = sha256(rom).hexdigest()
+baseline = sha256((WORK / 'rc2_reference.gbc').read_bytes()).hexdigest()
+assert baseline == '96b08ba49bc42096b2156a6795c86f1b47f40afe8786a6569da764d8c493163c'
 
 report_path = WORK / 'held_item_stat_cap_cpu_results.json'
 report = read(report_path.name)
@@ -91,5 +100,6 @@ summary = {
                'RC2 has separate historical evidence; these counts only cover held-item corrections.',
                'Not physical-hardware or full-playthrough verification.'],
 }
-(WORK / 'rc3_cpu_verification.json').write_text(json.dumps(summary, indent=2) + '\n')
+out_path = WORK / 'rc3_cpu_verification.json'
+out_path.write_text(json.dumps(summary, indent=2) + '\n')
 print('integrated_rc3_cpu_reports_verified', 6245, 'RC3 cases + 24 RC2 reference + 7 independent smoke', digest)

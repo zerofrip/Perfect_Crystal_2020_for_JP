@@ -369,6 +369,19 @@ cap_ranges = apply_held_item_stat_cap_fix(original, english_stock, patched_ue, o
 (root / 'work/held_item_stat_cap_ranges.json').write_text(json.dumps(cap_ranges, indent=2) + '\n')
 print('requested_rc3_held_item_cap', 'validated write ranges', len(cap_ranges))
 
+# Preserve the exact verified RC3 baseline before the RC4 corrections.
+rc3_reference = bytearray(output)
+rc3_reference[0x14D] = (-sum(rc3_reference[0x134:0x14D]) - 25) & 0xFF
+rc3_sum = (sum(rc3_reference) - rc3_reference[0x14E] - rc3_reference[0x14F]) & 0xFFFF
+rc3_reference[0x14E:0x150] = rc3_sum.to_bytes(2, 'big')
+assert sha256(rc3_reference).hexdigest() == 'b6f6b73dc7e6d8f4d3223b398fb1202519efae0c0e36959ab7ac43cb8e5a4c21'
+(root / 'work/rc3_reference.gbc').write_bytes(rc3_reference)
+
+from apply_rc4_corrections import apply_rc4_corrections
+rc4_ranges = apply_rc4_corrections(original, english_stock, patched_ue, output)
+(root / 'work/rc4_correction_ranges.json').write_text(json.dumps(rc4_ranges, indent=2) + '\n')
+print('requested_rc4_corrections', 'validated write ranges', len(rc4_ranges))
+
 # Game Boy ROM header and global checksums.
 output[0x14D] = (-sum(output[0x134:0x14D]) - 25) & 0xFF
 global_sum = (sum(output) - output[0x14E] - output[0x14F]) & 0xFFFF
