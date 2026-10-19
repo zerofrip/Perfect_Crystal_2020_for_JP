@@ -2,7 +2,7 @@
 
 このリポジトリは、『ポケットモンスター クリスタルバージョン』（日本語版）向けに、Perfect Crystal 2020 Update の内容を移植するために、この移植作業で作成したソースコードです。
 
-**本リポジトリには ROM、IPS/BPS パッチ、画像、音声、抽出データ、または第三者のソースツリーは含まれていません。** 必要な入力ファイルと第三者ツールは、利用者がローカル環境で別途準備してください。
+**本リポジトリには ROM、画像、音声、抽出データ、または第三者のソースツリーは含まれていません。** 必要な入力ファイルと第三者ツールは、利用者がローカル環境で別途準備してください。
 
 ## 概要
 
@@ -132,7 +132,7 @@ python3 -m unittest tests/test_source_only.py
 
 ## 公開制限
 
-- ROM、IPS/BPS パッチ、SAV、RAM、RTC、画像、音声、オブジェクトファイル、Ghidra プロジェクトなどの著作権/実行資産をリポジトリに追加しないでください。
+- ROM、画像、音声、オブジェクトファイル、Ghidra プロジェクトなどの著作権/実行資産をリポジトリに追加しないでください。
 - 個人を特定できる絶対パス、ホスト名、トークン、メールアドレスをソースに残さないでください。
 - 検証済みバイナリの SHA-256 値は文書化できますが、バイナリ自体は一切公開しないでください。
 - 第三者のオープンソースツールやソースツリーは同梱せず、利用者が個別に取得してください。
@@ -142,5 +142,5 @@ python3 -m unittest tests/test_source_only.py
 - Perfect Crystal 2020 Update: https://github.com/Superegz/Pokemon-Perfect-Crystal
 - pokekuristaru: https://github.com/PikalaxALT/pokekuristaru
 - pret/pokecrystal: https://github.com/pret/pokecrystal
-- pret/pokemon-reverse-engineering-tools
+- pret/pokemon-reverse-engineering-tools: https://github.com/pret/pokemon-reverse-engineering-tools
 - lazy_ips: https://github.com/btimofeev/lazy_ips
