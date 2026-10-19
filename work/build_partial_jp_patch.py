@@ -382,6 +382,20 @@ rc4_ranges = apply_rc4_corrections(original, english_stock, patched_ue, output)
 (root / 'work/rc4_correction_ranges.json').write_text(json.dumps(rc4_ranges, indent=2) + '\n')
 print('requested_rc4_corrections', 'validated write ranges', len(rc4_ranges))
 
+# Preserve the exact verified RC4 baseline before restoring the
+# Japanese-original graphics in RC5.
+rc4_reference = bytearray(output)
+rc4_reference[0x14D] = (-sum(rc4_reference[0x134:0x14D]) - 25) & 0xFF
+rc4_sum = (sum(rc4_reference) - rc4_reference[0x14E] - rc4_reference[0x14F]) & 0xFFFF
+rc4_reference[0x14E:0x150] = rc4_sum.to_bytes(2, 'big')
+assert sha256(rc4_reference).hexdigest() == 'f7a0da3b9df33d4d010b05d82c8e6644d09ebd9c42320cc1ee89d4e2fd20ddd6'
+(root / 'work/rc4_reference.gbc').write_bytes(rc4_reference)
+
+from apply_japanese_original_sprites import apply_japanese_original_sprites
+rc5_ranges = apply_japanese_original_sprites(original, english_stock, patched_ue, output)
+(root / 'work/rc5_sprite_restore_ranges.json').write_text(json.dumps(rc5_ranges, indent=2) + '\n')
+print('rc5_japanese_original_sprites', len(rc5_ranges), 'ranges restored to the Japanese originals')
+
 # Game Boy ROM header and global checksums.
 output[0x14D] = (-sum(output[0x134:0x14D]) - 25) & 0xFF
 global_sum = (sum(output) - output[0x14E] - output[0x14F]) & 0xFFFF

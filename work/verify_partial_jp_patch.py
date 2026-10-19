@@ -1,9 +1,10 @@
 """Check the local development patch's hashes, checksums and change ranges.
 
-RC4 is verified as a narrow delta on top of the exact RC3 snapshot.  The RC3
-verification is retained unchanged against the hash-gated rc3_reference.gbc
-file; the current ROM is then compared to the RC3 baseline plus the RC4
-correction layer.
+RC4 is verified as a narrow delta on top of the exact RC3 snapshot, and RC5
+as the Japanese-original graphics restoration on top of the exact RC4
+snapshot.  The RC3 verification is retained unchanged against the
+hash-gated rc3_reference.gbc file; the current ROM is then compared to the
+RC3 baseline plus the RC4 correction layer plus the RC5 restoration.
 """
 from pc_env import workspace
 from pathlib import Path
@@ -130,21 +131,37 @@ assert rc3_reference[0x399BA:0x39A40] == trainer_pointers
 assert rc3_reference[0x39A40:0x39A40 + len(trainer_data)] == trainer_data
 print("rc3_reference_feature_bytes_verified", True)
 
-# Now verify the current ROM is exactly the RC3 baseline plus the RC4 layer.
+# Now verify the RC4 reconstruction, then apply the RC5 graphics restoration
+# on top of it and compare the current ROM to the full expected result.
 from apply_rc4_corrections import apply_rc4_corrections
-expected = bytearray(rc3_reference)
-rc4_ranges = apply_rc4_corrections(stock, english, reference, expected)
+from apply_japanese_original_sprites import apply_japanese_original_sprites
+expected_rc4 = bytearray(rc3_reference)
+rc4_ranges = apply_rc4_corrections(stock, english, reference, expected_rc4)
+expected_rc4[0x14D] = (-sum(expected_rc4[0x134:0x14D]) - 25) & 0xFF
+expected_rc4_checksum = (sum(expected_rc4) - expected_rc4[0x14E] - expected_rc4[0x14F]) & 0xFFFF
+expected_rc4[0x14E:0x150] = expected_rc4_checksum.to_bytes(2, "big")
+assert sha256(expected_rc4).hexdigest() == 'f7a0da3b9df33d4d010b05d82c8e6644d09ebd9c42320cc1ee89d4e2fd20ddd6', \
+    "RC4 reconstruction does not match the verified RC4 snapshot"
+rc4_reference = (root / 'work/rc4_reference.gbc').read_bytes()
+assert rc4_reference == expected_rc4, "rc4_reference.gbc differs from the RC4 reconstruction"
+for start, size, label in rc4_ranges:
+    allowed.append((start, size))
+
+expected = bytearray(expected_rc4)
+rc5_ranges = apply_japanese_original_sprites(stock, english, reference, expected)
 expected[0x14D] = (-sum(expected[0x134:0x14D]) - 25) & 0xFF
 expected_checksum = (sum(expected) - expected[0x14E] - expected[0x14F]) & 0xFFFF
 expected[0x14E:0x150] = expected_checksum.to_bytes(2, "big")
-assert patched == expected, "RC4 ROM does not match RC3 baseline + RC4 corrections"
-for start, size, label in rc4_ranges:
+assert patched == expected, "RC5 ROM does not match RC4 snapshot + Japanese-original graphics"
+for start, size, label in rc5_ranges:
     allowed.append((start, size))
 
 changed = [i for i, (a, b) in enumerate(zip(stock, patched)) if a != b]
 assert all(any(start <= i < start + size for start, size in allowed) for i in changed)
 print("header_checksum_ok", True)
 print("global_checksum_ok", True)
+print("rc4_snapshot_gate_ok", True)
 print("changed_bytes", len(changed))
 print("outside_allowed_ranges", 0)
 print("rc4_correction_ranges", len(rc4_ranges))
+print("rc5_restored_ranges", len(rc5_ranges))

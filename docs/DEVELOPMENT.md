@@ -29,7 +29,16 @@ python3 work/build_partial_jp_patch.py
 - `work/development_only_jp_partial.gbc`
 - `work/development_only_jp_partial.ips`
 - 各種 `work/*_ranges.json`
-- `work/rc1_reference.gbc`、`work/rc2_reference.gbc`、`work/rc3_reference.gbc`
+- `work/rc1_reference.gbc`、`work/rc2_reference.gbc`、`work/rc3_reference.gbc`、`work/rc4_reference.gbc`
+
+## ドキュメント生成
+
+ビルド済み ROM から、リポジトリルートの `PORTING_STATUS.md`（チェックイン済みガイド）をテンプレートとして、データ表と最終生成物のマーカー区間のみを再生成し、`work/PORTING_STATUS.md` と `work/README_JP.md` を書き出します。マーカー区間以外の文章は書き換えません。パッケージングの前に実行してください。
+
+```bash
+python3 work/document_perfect_changes.py            # work/ と work/release/ 配下を更新
+python3 work/document_perfect_changes.py --update-source  # リポジトリルートの PORTING_STATUS.md も更新
+```
 
 ## パッケージング
 
@@ -55,8 +64,9 @@ python3 work/apply_jp_patch.py \
 
 主要な検証項目：
 
-- `verify_partial_jp_patch.py` — RC3 基盤と RC4 修正層の両方を検証
-- `verify_rc4_delta.py` — RC3 からの限定した変更範囲
+- `verify_partial_jp_patch.py` — RC3 基盤・RC4 修正層・RC5 画像復元の全層を検証
+- `verify_rc4_delta.py` — RC3 からの限定した変更範囲。引数に `rc4_reference.gbc` を渡すと歴史的 RC4 スナップショットを検証
+- `verify_rc5_delta.py` — RC4 スナップショットからの限定した復元範囲と、実際に展開した画像・アニメーション・パレットの日本語原版一致
 - `verify_cerulean_cave.py` — ハナダの洞窟のマップ/イベント/テキスト
 - `verify_gs_ball_binary.py` — ジーエスボールイベントの分岐
 - `verify_red_rewards_binary.py` — レッド戦後の装飾品フラグ
@@ -65,22 +75,14 @@ python3 work/apply_jp_patch.py \
 - `verify_requested_fixes.py` — RC2 要求修正（ムーンボール、りゅうのキバ、コイキング長さ、2段階能力低下）
 - `verify_held_item_stat_cap.py` — RC3 持ち物ステータス上限修正
 - `verify_gym_rematches.py`、`verify_dialogue_updates.py`、`verify_remaining_features.py` — ジム再戦/テキスト/その他機能
-- `verify_rc4_cpu_reports.py` — Hall フックの Hall/非 Hall/繰り返し 3 モード CPU 検証
-
-ドキュメント生成：
-
-```bash
-python3 work/document_perfect_changes.py
-```
-
-このスクリプトは `work/PORTING_STATUS.md` と `work/README_JP.md` を現在の RC4 ROM から再生成します。
+- `verify_rc4_cpu_reports.py` — Hall フックの Hall/非 Hall/繰り返し 3 モード CPU 検証。`--revision RC5` で `rc5_cpu_verification.json` を出力
 
 ## 既知の制限
 
 - 実機での動作確認は行われていません。
 - 全ストーリー最初から最後までのプレイスルー検証は行われていません。
 - 歴史的検証実績：RC2 CPU 参照 24 件、RC3 CPU 6245 件 + 独立 smoke 7 件
-- RC4 新規 CPU 検証：Hall フック 3 モード
+- RC4/RC5 の CPU 検証：Hall フック 3 モード（RC5 は RC4 からフックコード無変更を確認の上で再実施）
 
 ## 環境変数まとめ
 

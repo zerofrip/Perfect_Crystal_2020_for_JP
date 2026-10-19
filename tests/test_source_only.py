@@ -422,6 +422,50 @@ class TestSourceOnly(unittest.TestCase):
         apply_hall_hook_correction(candidate)
         self.assertEqual(candidate[HALL_HOOK_START + 20:HALL_HOOK_START + 24], bytes(4))
 
+    def test_rc5_restoration_rejects_wrong_baseline_without_mutation(self):
+        """RC5 staging refuses a range that does not match the sprite probe and never partially mutates."""
+        sys.path.insert(0, str(WORK_DIR))
+        try:
+            from apply_japanese_original_sprites import stage_restored_ranges
+        finally:
+            sys.path.pop(0)
+        original = bytes(range(256)) * 4
+        probe = bytearray(original)
+        probe[10:14] = b'ABCD'
+        ranges = [(10, 4, 'sprite_range'), (100, 2, 'other_range')]
+        # Second range deviates from the probe: reject the whole restoration.
+        candidate = bytearray(probe)
+        candidate[100:102] = b'ZZ'
+        snapshot = bytes(candidate)
+        with self.assertRaises(AssertionError):
+            stage_restored_ranges(candidate, original, probe, ranges)
+        # Neither range was applied: no partial mutation of the caller's buffer.
+        self.assertEqual(bytes(candidate), snapshot)
+
+    def test_rc5_restoration_restores_exactly_the_ranges(self):
+        """RC5 staging restores the Japanese bytes in every probed range and nothing else."""
+        sys.path.insert(0, str(WORK_DIR))
+        try:
+            from apply_japanese_original_sprites import stage_restored_ranges
+        finally:
+            sys.path.pop(0)
+        original = bytes(range(256)) * 4
+        probe = bytearray(original)
+        probe[10:14] = b'ABCD'
+        probe[100:102] = b'ZZ'
+        candidate = bytearray(probe)
+        candidate[200:204] = b'KEEP'  # non-range RC4 bytes must survive
+        snapshot = bytes(candidate)
+        staged, restored = stage_restored_ranges(candidate, original, probe,
+                                                 [(10, 4, 'sprite_range'), (100, 2, 'other_range')])
+        self.assertEqual(staged[10:14], original[10:14])
+        self.assertEqual(staged[100:102], original[100:102])
+        self.assertEqual(staged[200:204], b'KEEP')
+        self.assertEqual(staged[50:60], probe[50:60])
+        self.assertEqual([label for _, _, label in restored],
+                         ['sprite_range', 'other_range'])
+        self.assertEqual(bytes(candidate), snapshot)
+
 
 if __name__ == '__main__':
     unittest.main()
