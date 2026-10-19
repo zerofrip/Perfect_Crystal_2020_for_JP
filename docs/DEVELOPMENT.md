@@ -2,53 +2,34 @@
 
 ## 準備
 
-1. プライベートワークスペースを準備し、必要な ROM と第三者ツリーを配置します。
+1. プライベートワークスペースに日本語版 ROM と `lazy_ips` を配置します（詳細は `docs/DEPENDENCIES.md`）。
 2. `PC_WORKSPACE` 環境変数を設定するか、リポジトリルートにファイルを配置します。
-3. `work/prepare_pokemontools.py` を実行し、ディスアセンブルユーティリティに Python 3 互換性修正を適用します（メインビルドには不要）。
 
-## Hall Decoration Hook のビルド
+既定のビルドは日本語 ROM と `lazy_ips` だけで完結します。英語版 ROM や公開ソースツリーは不要です。
 
-`work/build_partial_jp_patch.py` は `work/hall_decorations_hook.gb` を読み込むため、メインビルドより先にフックをビルドしてください。
+## 既定の JPオンリー ビルド
 
 ```bash
 export PC_WORKSPACE=/path/to/private/workspace
-export PC_RGBDS=/path/to/rgbds-0.2.5
-bash work/build_hall_hook.sh
+
+python3 work/build_rc5_from_jp.py
 ```
 
-出力は `PC_WORKSPACE/work/hall_decorations_hook.gb` に書き出されます。
+このスクリプトは:
 
-## ローカルビルド
-
-```bash
-python3 work/build_partial_jp_patch.py
-```
-
-このスクリプトは以下を生成します（すべて `.gitignore` で無視されます）。
-
-- `work/development_only_jp_partial.gbc`
-- `work/development_only_jp_partial.ips`
-- 各種 `work/*_ranges.json`
-- `work/rc1_reference.gbc`、`work/rc2_reference.gbc`、`work/rc3_reference.gbc`、`work/rc4_reference.gbc`
-
-## ドキュメント生成
-
-ビルド済み ROM から、リポジトリルートの `PORTING_STATUS.md`（チェックイン済みガイド）をテンプレートとして、データ表と最終生成物のマーカー区間のみを再生成し、`work/PORTING_STATUS.md` と `work/README_JP.md` を書き出します。マーカー区間以外の文章は書き換えません。パッケージングの前に実行してください。
-
-```bash
-python3 work/document_perfect_changes.py            # work/ と work/release/ 配下を更新
-python3 work/document_perfect_changes.py --update-source  # リポジトリルートの PORTING_STATUS.md も更新
-```
+1. 入力 ROM のサイズ（2 MiB）と SHA-1/SHA-256 を検証し、不一致なら出力を書き込まずに中断します。
+2. `work/rc5_layers.py` の共有変更レイヤーと `work/rc5_defs/` の作成済み定義を日本語 ROM に適用します（未変更データは日本語 ROM からそのまま読み込みます。歴史的スプライト移植/復元レイヤーは日本語原版が最初から維持されるためスキップします）。
+3. 完全な結果をメモリ上で組み立て、ヘッダー/グローバルチェックサムを更新し、既知の RC5 出力 ROM SHA-256 と照合します。
+4. IPS をメモリ上で生成し、既知の IPS SHA-256 と照合した後、`lazy_ips` での再適用が元のビルドと一致することを確認します。
+5. すべての検証が通ってから `work/development_only_jp_partial.gbc` と `work/development_only_jp_partial.ips` を書き出します（既存の同一出力は冪等に再生成、異なる内容が既にある場合は拒否、入力 ROM とのパスエイリアスは拒否）。
 
 ## パッケージング
 
-検証スクリプトをすべて通過した後、`work/package_jp_patch.py` でリリース用 IPS を作成します。
-
 ```bash
-python3 work/package_jp_patch.py
+python3 work/package_rc5_from_jp.py
 ```
 
-このスクリプトは `PC_WORKSPACE/work/` からビルド済み ROM/IPS、CPU 検証レポート、ドキュメント（`README_JP.md`、`PORTING_STATUS.md`）を読み込み、パッケージング結果を `PC_WORKSPACE/work/release/` に書き出します。`verify_rc2_release.py` / `verify_rc3_release.py` は追加で `PC_WORKSPACE/work/release/RC1_metadata` および `RC2_metadata` を参照します。
+ビルド済み ROM/IPS と入力 ROM を検証し、`lazy_ips` ラウンドトリップを確認した後、`work/release/` に `Perfect_Crystal_2020_Japanese_RC5.ips` と `manifest.json`（`rom_size`、`input_sha1`、`input_sha256`、`ips_file`、`ips_sha256`、`output_sha256`）を書き出します。書き出しポリシーはビルダーと同じです（エイリアス拒否・異なる既存ファイルの保護・同一出力の冪等）。この manifest は `apply_jp_patch.py` がそのまま使用します。
 
 ## ユーザー ROM への適用
 
@@ -58,24 +39,46 @@ python3 work/apply_jp_patch.py \
   --output /path/to/output.gbc
 ```
 
-## 検証
+## ドキュメント生成（開発者・参照環境のみ）
 
-各 `verify_*.py` スクリプトは、二進数レベルで ROM または中間ファイルを検証します。`package_jp_patch.py` はこれらを順次呼び出します。
+`work/document_perfect_changes.py` は、リポジトリルートの `PORTING_STATUS.md`（チェックイン済みガイド）をテンプレートとして、データ表と最終生成物のマーカー区間のみを実ROMから再生成します。ただしこのツール自体は、英語版オリジナル/2020適用済みROM、RC4スナップショット、公開ソースツリー（`pokekuristaru` など）を参照する**開発者・参照環境向け**のものです。JPオンリーのパッチ生成には不要で、既定ビルドの実行には何の影響もありません。
 
-主要な検証項目：
+```bash
+python3 work/document_perfect_changes.py            # work/ と work/release/ 配下を更新
+python3 work/document_perfect_changes.py --update-source  # リポジトリルートの PORTING_STATUS.md も更新
+```
 
-- `verify_partial_jp_patch.py` — RC3 基盤・RC4 修正層・RC5 画像復元の全層を検証
-- `verify_rc4_delta.py` — RC3 からの限定した変更範囲。引数に `rc4_reference.gbc` を渡すと歴史的 RC4 スナップショットを検証
-- `verify_rc5_delta.py` — RC4 スナップショットからの限定した復元範囲と、実際に展開した画像・アニメーション・パレットの日本語原版一致
-- `verify_cerulean_cave.py` — ハナダの洞窟のマップ/イベント/テキスト
-- `verify_gs_ball_binary.py` — ジーエスボールイベントの分岐
-- `verify_red_rewards_binary.py` — レッド戦後の装飾品フラグ
-- `verify_trainer_binary.py`、`compare_red.py` — レッドを含むトレーナー改変
-- `audit_encounter_tables.py` — RC4 野生出現率の検証
-- `verify_requested_fixes.py` — RC2 要求修正（ムーンボール、りゅうのキバ、コイキング長さ、2段階能力低下）
-- `verify_held_item_stat_cap.py` — RC3 持ち物ステータス上限修正
-- `verify_gym_rematches.py`、`verify_dialogue_updates.py`、`verify_remaining_features.py` — ジム再戦/テキスト/その他機能
-- `verify_rc4_cpu_reports.py` — Hall フックの Hall/非 Hall/繰り返し 3 モード CPU 検証。`--revision RC5` で `rc5_cpu_verification.json` を出力
+## 歴史的な参照ビルド（任意）
+
+英語版 ROM と Perfect Crystal 2020 適用済み英語版 ROM による参照チェック付きの歴史的ビルドです。依存関係の準備方法は `docs/DEPENDENCIES.md` を参照してください。
+
+```bash
+export PC_WORKSPACE=/path/to/private/workspace
+
+# 歴史的 RC5 統合ビルド（RC1〜RC4 スナップショットのハッシュ検証を含む）
+python3 work/build_partial_jp_patch.py
+
+# 歴史的パッケージング（CPU 検証レポートを参照）
+python3 work/package_jp_patch.py
+```
+
+`build_partial_jp_patch.py` は `build_rc5_from_jp.py` と同じ `work/rc5_layers.py` の変更レイヤーを使用し、英語版参照との照合を追加で実行します。Hall 装飾品フックも共有レイヤー内の検証済みエミッタ（`work/rc5_defs/hall_hook.py`）が作成するため、`build_hall_hook.sh` と RGBDS は不要です。`work/hall_decorations_hook.asm` から生成したフックとの独立検証にのみ使用します。
+
+## ソースのみの検証
+
+```bash
+python3 -m unittest tests/test_source_only.py tests/test_jp_only_build.py
+```
+
+- `tests/test_source_only.py` — 公開ツリーの健全性（コンパイル、禁止ファイル、依存関係の解決）。
+- `tests/test_jp_only_build.py` — JPオンリー ビルドの契約（不正入力の拒否と出力なし、`python -O` でも同一、歴史的依存の非参照、検証済みフックのバイト一致）。
+
+## 環境変数まとめ
+
+| 変数 | デフォルト | 用途 |
+|------|------------|------|
+| `PC_WORKSPACE` | リポジトリルート | プライベートワークスペース全体 |
+| `PC_RGBDS` | `$PC_WORKSPACE/rgbds-0.2.5` | RGBDS バイナリディレクトリ（ASM フックの独立検証のみ・任意） |
 
 ## 既知の制限
 
@@ -83,10 +86,3 @@ python3 work/apply_jp_patch.py \
 - 全ストーリー最初から最後までのプレイスルー検証は行われていません。
 - 歴史的検証実績：RC2 CPU 参照 24 件、RC3 CPU 6245 件 + 独立 smoke 7 件
 - RC4/RC5 の CPU 検証：Hall フック 3 モード（RC5 は RC4 からフックコード無変更を確認の上で再実施）
-
-## 環境変数まとめ
-
-| 変数 | デフォルト | 用途 |
-|------|------------|------|
-| `PC_WORKSPACE` | リポジトリルート | プライベートワークスペース全体 |
-| `PC_RGBDS` | `$PC_WORKSPACE/rgbds-0.2.5` | RGBDS バイナリディレクトリ |

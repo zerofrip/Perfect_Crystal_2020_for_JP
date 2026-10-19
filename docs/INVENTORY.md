@@ -4,13 +4,14 @@
 
 | カテゴリ | 件数 | 説明 |
 |----------|------|------|
-| Python ビルド/ポート/修正/検証/調査スクリプト | 158 件 | 元の `work/*.py` + `work/apply_rc4_corrections.py`, `work/verify_rc4_delta.py`, `work/verify_rc4_cpu_reports.py` + `work/apply_japanese_original_sprites.py`（RC5 画像復元層）, `work/verify_rc5_delta.py` |
-| 新規 Python ヘルパー | 2 件 | `work/pc_env.py`（ワークスペース解決）、`work/prepare_pokemontools.py`（pokemontools 互換性修正） |
-| 新規ビルドスクリプト | 1 件 | `work/build_hall_hook.sh` |
+| Python ビルド/ポート/修正/検証/調査スクリプト | 163 件 | `work/*.py`。既定の JPオンリー ビルダー `work/build_rc5_from_jp.py`、パッケージング `work/package_rc5_from_jp.py`、共有変更レイヤー `work/rc5_layers.py`、歴史的ビルダー `work/build_partial_jp_patch.py`、ヘルパー `work/pc_env.py`・`work/prepare_pokemontools.py` を含む |
+| JPオンリー 用の作成済み定義 | 8 件 | `work/rc5_defs/`（charmap、マップ索引、出現、トレーナー、持ち物、洞窟/街レイアウト、Hall フックエミッタ） |
+| ビルドスクリプト | 1 件 | `work/build_hall_hook.sh`（フック ASM の独立検証用・任意） |
 | Ghidra スクリプト | 5 件 | `work/ghidra_scripts/*.java` |
-| RGBDS フック ASM | 1 件 | `work/hall_decorations_hook.asm` |
+| RGBDS フック ASM | 1 件 | `work/hall_decorations_hook.asm`（フックエミッタの照合元・任意検証用） |
 | プレイヤーズガイド | 1 件 | `PORTING_STATUS.md`（リポジトリルート・RC5 総合ガイド、データ表はマーカー区間のみ自動生成） |
-| **合計** | **168 件** | ソースのみ |
+| ソースのみテスト | 2 件 | `tests/test_source_only.py`、`tests/test_jp_only_build.py` |
+| **合計** | **181 件** | ソースのみ |
 
 ## 意図的に移行しなかったファイル
 
@@ -33,6 +34,8 @@
 
 ```
 PORTING_STATUS.md
+tests/test_jp_only_build.py
+tests/test_source_only.py
 work/apply_jp_patch.py
 work/apply_japanese_original_sprites.py
 work/apply_rc4_corrections.py
@@ -57,6 +60,7 @@ work/battlefix_more_scan.py
 work/battlefix_scan.py
 work/build_hall_hook.sh
 work/build_partial_jp_patch.py
+work/build_rc5_from_jp.py
 work/classify_ips_records.py
 work/clockreset_analyse.py
 work/clockreset_ui.py
@@ -125,6 +129,7 @@ work/moon_ball_fix_inspect.py
 work/nonbattle_event_fields_audit.py
 work/nonbattle_source_audit.py
 work/package_jp_patch.py
+work/package_rc5_from_jp.py
 work/pc_env.py
 work/prepare_pokemontools.py
 work/port_battle_bugfixes.py
@@ -138,6 +143,15 @@ work/port_remaining_features.py
 work/port_restored_sprites.py
 work/prepare_expected_johto_grass.py
 work/prepare_expected_johto_water.py
+work/rc5_defs/__init__.py
+work/rc5_defs/cave.py
+work/rc5_defs/charmap.py
+work/rc5_defs/encounters.py
+work/rc5_defs/hall_hook.py
+work/rc5_defs/items.py
+work/rc5_defs/maps.py
+work/rc5_defs/trainers.py
+work/rc5_layers.py
 work/remaining_disassemble.py
 work/remaining_play_names.py
 work/remaining_playthrough.py

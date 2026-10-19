@@ -766,8 +766,10 @@ RC2の1,357ケースの検証記録は、当時のROMハッシュに結び付け
 
 - `work/document_perfect_changes.py` は、このファイル（リポジトリルートの `PORTING_STATUS.md`）をテンプレートとして、データ表と「最終生成物」の2つのマーカー区間だけを実ROMから再生成します。それ以外の文章は書き換えません。
 - プライベートワークスペースでは `work/PORTING_STATUS.md` と `work/release/` 配下にコピーを書き出し、`--update-source` 指定時のみこのチェックイン済みファイルを更新します。
-- `work/build_partial_jp_patch.py`: 統合ビルダー（RC1〜RC5の全レイヤーを順に適用）。
-- `work/package_jp_patch.py`: 静的検証後、`release/` にIPSとハッシュ付きmanifestを生成。
+- `work/build_rc5_from_jp.py`: 既定の統合ビルダー。日本語版 ROM と `lazy_ips` だけで、同梱の作成済み定義（`work/rc5_defs/`）と共有変更レイヤー（`work/rc5_layers.py`）から RC5 を再現し、既知の ROM/IPS ハッシュと完全一致しない場合は出力しません。
+- `work/package_rc5_from_jp.py`: 既定のパッケージング。検証後、`release/` にIPSとハッシュ付きmanifest（`rom_size`、`input_sha1`、`input_sha256`、`ips_file`、`ips_sha256`、`output_sha256`）を生成。
+- `work/build_partial_jp_patch.py`: 歴史的統合ビルダー（英語版参照チェック付きで RC1〜RC5 の全レイヤーを順に適用。任意）。
+- `work/package_jp_patch.py`: 歴史的パッケージング（CPU 検証レポート等を参照。任意）。
 - `work/apply_jp_patch.py`: 入出力ハッシュを検証し、`lazy_ips` で適用。既存ファイルを上書きしません。
 - `work/verify_*.py`: バイナリ/CPU検証スクリプト。
 - `README.md`: リポジトリの説明とビルド手順。

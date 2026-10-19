@@ -28,10 +28,11 @@ def apply_sharp_stat_drop_fix(original,english_stock,perfect,output):
     rc1=bytes.fromhex('fa00c7e6f0280405280104f0e4a72823')
     released=bytes.fromhex('fa0cc7e6f0280405280104cd2773')
     stock=bytes.fromhex('fa0cc7e6f0280405200104f0e4a72823')
-    assert len(output)==len(original)==len(english_stock)==len(perfect)==0x200000
+    assert len(output)==len(original)==0x200000
     assert original.count(before)==1 and original.find(before)==0x36305
-    assert english_stock.count(stock)==1 and english_stock.find(stock)==0x36305
-    assert perfect.count(released)==1 and perfect.find(released)==0x362e9
+    if english_stock is not None and perfect is not None:
+        assert english_stock.count(stock)==1 and english_stock.find(stock)==0x36305
+        assert perfect.count(released)==1 and perfect.find(released)==0x362e9
     assert original[OFFSET]==0x20
     assert output[0x36305:0x36305+len(rc1)]==rc1, 'expected released-2020/RC1 stat-drop preimage'
     assert original[HOOK_OFFSET:HOOK_OFFSET+len(STAT_BLOCK)]==STAT_BLOCK

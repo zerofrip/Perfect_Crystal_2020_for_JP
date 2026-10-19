@@ -1,6 +1,6 @@
 """Keep Japanese NPC explanations consistent with the released 2020 changes."""
 from hashlib import sha1
-from map_layout import ROOT
+from map_layout import ROOT,jp_named_maps
 from japanese_text import dialogue,encode
 from dialogue_mapping import ENTRIES,locate
 from gym_text_evidence import english_chars
@@ -56,15 +56,20 @@ def updated_text(index,old):
 
 def apply_dialogue_updates(original,english_stock,perfect,output):
     assert sha1(original).hexdigest()=='95127b901bbce2407daf43cce9f45d4c27ef635d'
-    assert sha1(english_stock).hexdigest()=='f2f52230b536214ef7c9924f483392993e226cfb'
+    refs=english_stock is not None and perfect is not None
+    if refs:
+        assert sha1(english_stock).hexdigest()=='f2f52230b536214ef7c9924f483392993e226cfb'
+        assert sha1(perfect).hexdigest()=='dd00b737fbd18d2e8ae064097a36e8fd4b16855d'
     engine=text_engine(original)
+    jp_layout=jp_named_maps(original)
     changes=[]
     cursor=TEXT_BANK*0x4000
     for index,config in enumerate(ENTRIES):
-        jp=locate(original,config,japanese=True)
-        en=locate(english_stock,config)
-        release=locate(perfect,config,perfect=True)
-        assert_released_change(index,en['content'],release['content'])
+        jp=locate(original,config,japanese=True,layout=jp_layout)
+        if refs:
+            en=locate(english_stock,config)
+            release=locate(perfect,config,perfect=True)
+            assert_released_change(index,en['content'],release['content'])
         replacement=updated_text(index,jp['content'])
         if len(replacement)<=len(jp['content']):
             writes=[(jp['text'],replacement,'Japanese explanation')]

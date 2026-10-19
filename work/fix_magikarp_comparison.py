@@ -18,15 +18,18 @@ CORRECT = bytes.fromhex('78bad8c079bbc9')
 def apply_magikarp_comparison_fix(original, english_stock, perfect, output):
     """Return one (offset, size, label) range after validating RC1 preimages."""
     assert sha1(original).hexdigest() == JP_SHA1, 'wrong Japanese original'
-    assert sha1(english_stock).hexdigest() == UE_SHA1, 'wrong English original'
-    assert sha1(perfect).hexdigest() == PERFECT_SHA1, 'wrong released 2020 ROM'
+    if english_stock is not None and perfect is not None:
+        assert sha1(english_stock).hexdigest() == UE_SHA1, 'wrong English original'
+        assert sha1(perfect).hexdigest() == PERFECT_SHA1, 'wrong released 2020 ROM'
     assert len(output) == len(original) == 0x200000, 'wrong output size'
-    for rom, anchor, offset in (
-        (original, ORIGINAL, ENTRY),
-        (english_stock, ORIGINAL, 0xFBC9A),
-        (perfect, bytes.fromhex('78bad879bbc9'), 0xFBC9A),
-    ):
+    for rom, anchor, offset in ((original, ORIGINAL, ENTRY),):
         assert rom.count(anchor) == 1 and rom.find(anchor) == offset, 'comparison anchor mismatch'
+    if english_stock is not None and perfect is not None:
+        for rom, anchor, offset in (
+            (english_stock, ORIGINAL, 0xFBC9A),
+            (perfect, bytes.fromhex('78bad879bbc9'), 0xFBC9A),
+        ):
+            assert rom.count(anchor) == 1 and rom.find(anchor) == offset, 'comparison anchor mismatch'
     assert output[ENTRY:ENTRY + len(RC1)] == RC1, 'released-2020 JP comparison not applied or changed'
 
     # Actual JP caller: read DE from the table, CALL comparison, JR NC .next.

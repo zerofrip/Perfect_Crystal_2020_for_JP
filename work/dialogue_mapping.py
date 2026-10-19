@@ -26,9 +26,9 @@ def japanese_chars():
     return result
 
 
-def locate(rom,config,perfect=False,japanese=False):
+def locate(rom,config,perfect=False,japanese=False,layout=None):
     name,index,kind=config
-    entry=maps(rom,perfect)[name]
+    entry=(layout if layout is not None else maps(rom,perfect))[name]
     person=events(rom,entry['events'])['people'][index]
     bank=entry['bank']
     script=file_offset(bank,word(person,9))

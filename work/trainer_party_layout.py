@@ -85,3 +85,61 @@ def rebuilt_2020_japanese_trainers(japanese, english, updated):
     assert len(new_data) - len(old_data) == 117
     assert start + len(new_data) == 0x3B775
     return bytes(pointers), bytes(new_data), changed_trainers
+
+
+def serialized_members(kind, members):
+    """Serialize authored (level, species, item, moves) members by kind bits."""
+    data = bytearray()
+    for level, species, item, moves in members:
+        data.append(level)
+        data.append(species)
+        if kind & 2:
+            assert item is not None, 'kind requires a held item'
+            data.append(item)
+        if kind & 1:
+            assert moves is not None and len(moves) == 4, 'kind requires four moves'
+            data.extend(moves)
+    return bytes(data)
+
+
+def rebuilt_japanese_trainers(japanese, changed):
+    """JP-only rebuild: Japanese names/parties plus authored battle changes.
+
+    ``changed`` maps (group, trainer_index) to (kind, members) authored
+    definitions; every other trainer keeps its Japanese-original party read
+    from the JP ROM.  Returns (pointers, data, changed_count) exactly like
+    rebuilt_2020_japanese_trainers.
+    """
+    jp_groups = trainer_groups(japanese, 0x399BA, 0x3B700)
+    start = 0x39A40
+    assert jp_groups[0][0][0] == start
+    old_data = bytearray()
+    new_data = bytearray()
+    pointers = bytearray()
+    changed_trainers = 0
+    for group_index, jp_group in enumerate(jp_groups):
+        address = 0x4000 + start + len(new_data) - 0x38000
+        assert 0x4000 <= address < 0x8000
+        pointers.extend(address.to_bytes(2, 'little'))
+        for trainer_index, (jp_start, jp_type, jp_kind, jp_width, jp_members) in enumerate(jp_group):
+            japanese_name = japanese[jp_start:jp_type]
+            assert japanese_name.endswith(b'\x50')
+
+            def battle_data(rom, kind, width, members):
+                return bytes((kind,)) + b''.join(
+                    rom[member:member + width] for member in members
+                ) + b'\xff'
+
+            jp_battle = battle_data(japanese, jp_kind, jp_width, jp_members)
+            old_data.extend(japanese_name + jp_battle)
+            if (group_index, trainer_index) in changed:
+                kind, members = changed[(group_index, trainer_index)]
+                new_battle = bytes((kind,)) + serialized_members(kind, members) + b'\xff'
+                changed_trainers += 1
+            else:
+                new_battle = jp_battle
+            new_data.extend(japanese_name + new_battle)
+    assert len(pointers) == GROUP_COUNT * 2
+    assert bytes(old_data) == japanese[start:0x3B700]
+    assert changed_trainers == len(changed)
+    return bytes(pointers), bytes(new_data), changed_trainers

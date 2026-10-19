@@ -104,24 +104,29 @@ def corrected_routine():
 
 def apply_moon_ball_fix(original, english_stock, perfect, output):
     """Mutate a previously ported JP ROM; reject ambiguity/conflicts atomically."""
-    for rom, digest in ((original, JP_SHA1), (english_stock, UE_SHA1),
-                        (perfect, PERFECT_SHA1)):
-        assert sha1(rom).hexdigest() == digest, 'unexpected source ROM'
+    assert sha1(original).hexdigest() == JP_SHA1, 'unexpected source ROM'
+    if english_stock is not None and perfect is not None:
+        for rom, digest in ((english_stock, UE_SHA1), (perfect, PERFECT_SHA1)):
+            assert sha1(rom).hexdigest() == digest, 'unexpected source ROM'
     assert len(output) == len(original) == 0x200000
     for rom, pattern, offset in ((original, JP_BEFORE, ENTRY),
-                                 (english_stock, UE_BEFORE, 0xECDD),
-                                 (perfect, UE_2020, 0xECD8),
                                  (output, JP_2020, ENTRY)):
         assert rom.find(pattern) == offset and rom.find(pattern, offset+1) < 0, \
             ('Moon Ball preimage missing or ambiguous', hex(offset))
+    if english_stock is not None and perfect is not None:
+        for rom, pattern, offset in ((english_stock, UE_BEFORE, 0xECDD),
+                                     (perfect, UE_2020, 0xECD8)):
+            assert rom.find(pattern) == offset and rom.find(pattern, offset+1) < 0, \
+                ('Moon Ball preimage missing or ambiguous', hex(offset))
     readers = bytes.fromhex('e08bf09df5f08bd77ee08bf1d7f08bc9e08bf09df5f08bd72a666ff1d7c9')
     assert original[0x3019:0x3037] == output[0x3019:0x3037] == readers
     pointer_anchor = bytes.fromhex('496964698369a169ba69d569f1690c6a')
     assert original.find(pointer_anchor) == JP_EVOS
     assert original.find(pointer_anchor, JP_EVOS+1) < 0
     assert output[JP_EVOS:JP_EVOS+502] == original[JP_EVOS:JP_EVOS+502]
-    assert evolution_records(original, JP_EVOS) == evolution_records(english_stock, UE_EVOS)
-    assert evolution_records(output, JP_EVOS) == evolution_records(perfect, UE_EVOS)
+    if english_stock is not None and perfect is not None:
+        assert evolution_records(original, JP_EVOS) == evolution_records(english_stock, UE_EVOS)
+        assert evolution_records(output, JP_EVOS) == evolution_records(perfect, UE_EVOS)
     assert moon_targets(output) == TARGETS
     routine = corrected_routine()
     assert original[CAVE:CAVE+len(routine)] == bytes(len(routine)), 'original cave occupied'

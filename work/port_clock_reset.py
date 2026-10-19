@@ -94,10 +94,12 @@ def apply_clock_reset(original, english_stock, perfect, output):
     for offset, value in anchors.items():
         expected = bytes.fromhex(value)
         assert original[offset:offset+len(expected)] == expected, f'clock anchor {offset:x}'
-    # Released 2020 title combination, and its password-free flag write.
-    assert perfect[0x631f:0x6325] == bytes.fromhex('7ee686fe8628')
-    assert bytes.fromhex('3e00cdcb2f3e80ea60accde12f') in perfect[0x4d3b1:0x4d40d]
-    assert bytes.fromhex('3e80ea60ac') in english_stock[0x4d3b1:0x4d41e]
+    # Released 2020 title combination, and its password-free flag write
+    # (historical reference cross-checks).
+    if perfect is not None and english_stock is not None:
+        assert perfect[0x631f:0x6325] == bytes.fromhex('7ee686fe8628')
+        assert bytes.fromhex('3e00cdcb2f3e80ea60accde12f') in perfect[0x4d3b1:0x4d40d]
+        assert bytes.fromhex('3e80ea60ac') in english_stock[0x4d3b1:0x4d41e]
     payload, labels = clock_reset_payload()
     assert original[CAVE:0x8000] == bytes(0x8000-CAVE)
     assert output[CAVE:0x8000] == original[CAVE:0x8000], 'clock cave already used'

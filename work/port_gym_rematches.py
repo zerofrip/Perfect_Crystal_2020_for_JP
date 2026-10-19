@@ -6,7 +6,7 @@ remain in place. Only their already-completed conversation tail is redirected.
 """
 from hashlib import sha1
 import re
-from map_layout import ROOT, maps, events, file_offset, word
+from map_layout import ROOT, maps, jp_named_maps, events, file_offset, word
 from japanese_text import dialogue
 from gym_text_engine import text_engine
 
@@ -118,8 +118,13 @@ def leader_info(rom, layout, config, *, perfect=False, japanese=False):
 def apply_gym_rematches(original, english_stock, perfect, output):
     """Append validated patches to output and return (offset,size,label) ranges."""
     assert sha1(original).hexdigest()=='95127b901bbce2407daf43cce9f45d4c27ef635d'
-    assert sha1(english_stock).hexdigest()=='f2f52230b536214ef7c9924f483392993e226cfb'
-    layouts=[maps(original),maps(english_stock),maps(perfect,True)]
+    refs=english_stock is not None and perfect is not None
+    if refs:
+        assert sha1(english_stock).hexdigest()=='f2f52230b536214ef7c9924f483392993e226cfb'
+        assert sha1(perfect).hexdigest()=='dd00b737fbd18d2e8ae064097a36e8fd4b16855d'
+        layouts=[maps(original),maps(english_stock),maps(perfect,True)]
+    else:
+        layouts=[jp_named_maps(original)]
     text=text_engine(original)
     changed=[]
     cursor=PAYLOAD_BANK*0x4000
@@ -127,8 +132,9 @@ def apply_gym_rematches(original, english_stock, perfect, output):
     for config in GYMS:
         name,index,cls,gate,flag,question,defeat=config
         japanese=leader_info(original,layouts[0],config,japanese=True)
-        stock=leader_info(english_stock,layouts[1],config)
-        released=leader_info(perfect,layouts[2],config,perfect=True)
+        if refs:
+            stock=leader_info(english_stock,layouts[1],config)
+            released=leader_info(perfect,layouts[2],config,perfect=True)
         bank=japanese['bank']
         # PrintWinLossText obtains the map's script bank, not ScriptBank.
         # Actual JP lacks TX_FAR ($16), so use its existing TX_START_ASM ($08)

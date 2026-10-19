@@ -23,13 +23,14 @@
 ├── .gitignore                           追跡禁止ファイルの定義
 ├── work/                                主要な Python スクリプト
 │   ├── pc_env.py                        ワークスペース解決ヘルパー
-│   ├── build_partial_jp_patch.py        RC5 統合ビルダー
-│   ├── package_jp_patch.py              検証済み IPS のパッケージング
+│   ├── build_rc5_from_jp.py             既定の JPオンリー RC5 ビルダー
+│   ├── package_rc5_from_jp.py           既定の JPオンリー パッケージング
+│   ├── rc5_layers.py                    共有の変更レイヤー（両ビルダーで使用）
+│   ├── rc5_defs/                        作成済みの意味的変更定義（日本語 ROM のみで使用）
+│   ├── build_partial_jp_patch.py        歴史的統合ビルダー（英語版参照が必要・任意）
+│   ├── package_jp_patch.py              歴史的パッケージング（CPU レポート等が必要・任意）
 │   ├── apply_jp_patch.py                ユーザー所有 ROM への IPS 適用
-│   ├── prepare_pokemontools.py          pokemontools 互換性修正
 │   ├── trainer_party_layout.py          トレーナーデータの再配置ロジック
-│   ├── apply_rc4_corrections.py         RC4 補正層
-│   ├── apply_japanese_original_sprites.py  RC5 画像復元層
 │   ├── port_*.py                        各種移植モジュール
 │   ├── fix_*.py                         RC2/RC3 修正モジュール
 │   ├── verify_*.py                      二進数/CPU 検証スクリプト
@@ -41,73 +42,71 @@
 │   ├── DEVELOPMENT.md                   開発・検証フロー
 │   └── INVENTORY.md                     移行ファイルと除外ファイルの対照表
 └── tests/
-    └── test_source_only.py              ソースのみの健全性チェック
+    ├── test_source_only.py              ソースのみの健全性チェック
+    └── test_jp_only_build.py            JPオンリー ビルドの契約テスト
 ```
 
 ## 動作に必要な環境
 
 - Python 3.11 以上（開発時は Python 3.14.4 でテスト済み）
 - 利用者が所有する日本語版 Crystal ROM（SHA-1: `95127b901bbce2407daf43cce9f45d4c27ef635d`）
-- 同じく利用者が所有する英語版 Crystal ROM V1.1（SHA-1: `f2f52230b536214ef7c9924f483392993e226cfb`）
-- Perfect Crystal 2020 Update 適用済み英語版 ROM（SHA-1: `dd00b737fbd18d2e8ae064097a36e8fd4b16855d`）
-- 以下の第三者ツリー/ライブラリ（詳細は `docs/DEPENDENCIES.md`）
-  - `lazy_ips`（ルート直下）
-  - `pokemon-reverse-engineering-tools`（`work/` 直下）
-  - `pokekuristaru`（ルート直下、マップ名・charmap・tileset 参照に必須）
-  - `perfect_crystal_source`（ルート直下、マップ名参照に必須）
-  - `rgbds-0.2.5`（Hall Decoration Hook のビルドに必須）
+- `lazy_ips`（IPS 生成と再適用検証に使用。詳細は `docs/DEPENDENCIES.md`）
+
+**既定のビルドに英語版 ROM、2020 年版 IPS、過去のスナップショット、検証レポート、公開逆アセンブリツリーは不要です。** すべての変更は `work/rc5_defs/` の人間が読める定義と作成済みの機械語として同梱され、未変更データは日本語 ROM からそのまま読み込まれます。
+
+歴史的な参照ビルド（`build_partial_jp_patch.py`）だけが、英語版 ROM と Perfect Crystal 2020 適用済み英語版 ROM、`pokekuristaru` などのツリーを使用します（任意）。
 
 ## ワークスペースの設定
 
 スクリプトは `PC_WORKSPACE` 環境変数で指定されたプライベートワークスペースを使用します。未設定の場合はリポジトリルートが使用されますが、実際のビルドには ROM 等のプライベートファイルが必要です。
 
-依存関係は固定の相対レイアウトで解決されます。
+既定のビルドに必要なレイアウト:
 
 ```
 $PC_WORKSPACE/
   ├── Pocket Monsters - Crystal Version (Japan).gbc
-  ├── Pokemon - Crystal Version (UE) (V1.1) [C][!].gbc
-  ├── lazy_ips/
-  ├── pokekuristaru/
-  ├── perfect_crystal_source/
-  ├── rgbds-0.2.5/
-  └── work/
-        ├── perfect_crystal_ue_patched.gbc
-        └── pokemon-reverse-engineering-tools/
+  └── lazy_ips/
 ```
 
-RGBDS のみ `PC_RGBDS` 環境変数で別のパスを指定できます。
+歴史的ビルド（任意）は、さらに英語版 ROM、`work/perfect_crystal_ue_patched.gbc`、`pokekuristaru/`、`perfect_crystal_source/` などを同じ固定レイアウトで必要とします（`docs/DEPENDENCIES.md` 参照）。
 
 ## 主なコマンド例
 
 ```bash
 export PC_WORKSPACE=/path/to/private/workspace
-export PC_RGBDS=/path/to/rgbds-0.2.5
 
-# 0. pokemontools 互換性修正（ディスアセンブルユーティリティを使う場合）
-python3 work/prepare_pokemontools.py
+# 1. 既定の JPオンリー RC5 ビルド（日本語 ROM と lazy_ips のみを使用）
+python3 work/build_rc5_from_jp.py
 
-# 1. Hall Decoration Hook のビルド（メインビルドより先に実施）
-bash work/build_hall_hook.sh
+# 2. 検証済み IPS のパッケージング（release/ に manifest を生成）
+python3 work/package_rc5_from_jp.py
 
-# 2. ローカルでの RC5 統合ビルド
-python3 work/build_partial_jp_patch.py
-
-# 3. ガイドとドキュメントの生成
-python3 work/document_perfect_changes.py
-
-# 4. 検証済み IPS のパッケージング
-python3 work/package_jp_patch.py
-
-# 5. ユーザー所有 ROM への IPS 適用
+# 3. ユーザー所有 ROM への IPS 適用
 python3 work/apply_jp_patch.py \
   "$PC_WORKSPACE/Pocket Monsters - Crystal Version (Japan).gbc" \
   --output /path/to/private/output.gbc
 ```
 
-`package_jp_patch.py` は、ビルド済みの `development_only_jp_partial.gbc` / `development_only_jp_partial.ips`、CPU 検証レポート、ドキュメント（`README_JP.md`、`PORTING_STATUS.md`）を `PC_WORKSPACE/work/` から読み込み、パッケージング結果を `PC_WORKSPACE/work/release/` に書き出します。過去のリリース検証には `verify_rc2_release.py` / `verify_rc3_release.py` が `PC_WORKSPACE/work/release/RC1_metadata` および `RC2_metadata` を追加で参照します。これらの入力ファイルはソースオンリーな本リポジトリには含まれていないため、パッケージングにはそれらを別途用意したプライベートワークスペースが必要です。
+`build_rc5_from_jp.py` は、入力 ROM のサイズとハッシュを検証し、完全な結果をメモリ上で組み立ててから既知の RC5 出力/IPS ハッシュと照合し、最後に `lazy_ips` での再適用が一致することを確認してから書き出します。間違った入力や結果は最終出力を書き込む前に拒否されます。既存の同一出力は冪等に再生成され、異なる内容が既にある場合は拒否されます。
 
-`work/document_perfect_changes.py` は、リポジトリルートの `PORTING_STATUS.md`（チェックイン済みガイド）をテンプレートとして、実ROMからデータ表と最終生成物のマーカー区間のみを再生成し、`PC_WORKSPACE/work/PORTING_STATUS.md` と `PC_WORKSPACE/work/README_JP.md` を更新します。実行にはビルド済みの RC5 ROM（`development_only_jp_partial.gbc`）が必要です。`--update-source` を付けると、再生成結果をチェックイン済みの `PORTING_STATUS.md` にも書き戻します。マーカー区間以外の文章は書き換えません：
+`package_rc5_from_jp.py` は、`PC_WORKSPACE/work/` のビルド済み ROM/IPS を検証し、`PC_WORKSPACE/work/release/` に `Perfect_Crystal_2020_Japanese_RC5.ips` と `manifest.json`（`rom_size`、`input_sha1`、`input_sha256`、`ips_file`、`ips_sha256`、`output_sha256`）を書き出します。この manifest は `apply_jp_patch.py` がそのまま使用します。
+
+歴史的な参照ビルド（任意）。Hall 装飾品フックも共有レイヤー内の検証済みエミッタ（`work/rc5_defs/hall_hook.py`）が作成するため、`build_hall_hook.sh` と RGBDS は不要です（`work/hall_decorations_hook.asm` からの独立検証にのみ使用します）:
+
+```bash
+export PC_WORKSPACE=/path/to/private/workspace
+
+# 0. pokemontools 互換性修正（ディスアセンブルユーティリティを使う場合）
+python3 work/prepare_pokemontools.py
+
+# 1. 歴史的 RC5 統合ビルド（英語版参照チェック付き）
+python3 work/build_partial_jp_patch.py
+
+# 2. 歴史的パッケージング（CPU 検証レポート等を参照）
+python3 work/package_jp_patch.py
+```
+
+`work/document_perfect_changes.py` は、リポジトリルートの `PORTING_STATUS.md`（チェックイン済みガイド）をテンプレートとして、実ROMからデータ表と最終生成物のマーカー区間のみを再生成し、`PC_WORKSPACE/work/PORTING_STATUS.md` と `PC_WORKSPACE/work/README_JP.md` を更新します。ただしこのツール自体は、英語版オリジナル/2020適用済みROM、RC4スナップショット、公開ソースツリーを参照する**開発者・参照環境向け**であり、JPオンリーのパッチ生成には不要です。`--update-source` を付けると、再生成結果をチェックイン済みの `PORTING_STATUS.md` にも書き戻します。マーカー区間以外の文章は書き換えません：
 
 ```bash
 python3 work/document_perfect_changes.py
@@ -117,7 +116,7 @@ python3 work/document_perfect_changes.py --update-source
 ## ソースのみの検証
 
 ```bash
-python3 -m unittest tests/test_source_only.py
+python3 -m unittest tests/test_source_only.py tests/test_jp_only_build.py
 ```
 
 ## 公開制限

@@ -249,7 +249,8 @@ class TestSourceOnly(unittest.TestCase):
     def test_dependency_closure(self):
         """All imports resolve to stdlib, local modules, or known externals."""
         stdlib = set(getattr(sys, 'stdlib_module_names', []))
-        local = {p.stem for p in WORK_DIR.glob('*.py')} | {'pc_env'}
+        local = ({p.stem for p in WORK_DIR.glob('*.py')} | {'pc_env', 'rc5_defs'} |
+                 {f'rc5_defs.{p.stem}' for p in (WORK_DIR / 'rc5_defs').glob('*.py')})
         known_external = {'lazy_ips', 'pokemontools', 'pyboy'}
         allowed = stdlib | local | known_external
 

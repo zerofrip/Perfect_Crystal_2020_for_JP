@@ -30,16 +30,18 @@ WRAPPER_CODE = bytes.fromhex('e5cdb152e1c34d53')
 
 def apply_held_item_stat_cap_fix(original, english_stock, perfect, output):
     """Validate all preimages first, then mutate output and return write ranges."""
-    for data, digest in ((original, JP_SHA1), (english_stock, UE_SHA1),
-                         (perfect, PERFECT_SHA1)):
-        assert sha1(data).hexdigest() == digest, 'unexpected source ROM'
+    assert sha1(original).hexdigest() == JP_SHA1, 'unexpected source ROM'
+    if english_stock is not None and perfect is not None:
+        for data, digest in ((english_stock, UE_SHA1), (perfect, PERFECT_SHA1)):
+            assert sha1(data).hexdigest() == digest, 'unexpected source ROM'
     assert len(output) == len(original) == 0x200000
 
     def unique(data, expected, offset, label):
         assert data.find(expected) == offset and data.find(expected, offset+1) < 0, label
 
-    unique(perfect, SPECIES_2020, 0x353F4, 'released species cap anchor')
-    unique(perfect, METAL_2020, 0x352CE, 'released Metal cap anchor')
+    if perfect is not None:
+        unique(perfect, SPECIES_2020, 0x353F4, 'released species cap anchor')
+        unique(perfect, METAL_2020, 0x352CE, 'released Metal cap anchor')
     unique(output, SPECIES_2020, SPECIES_CAVE, 'ported species cap anchor')
     unique(output, METAL_2020, METAL_CAVE, 'ported Metal cap anchor')
     unique(original, bytes.fromhex('e5cd037e7ee1bac0cb25cb14c9'), 0x353E9, 'JP species entry')

@@ -50,6 +50,35 @@ def maps(rom, perfect=False, primary_bank=0x25):
     return result
 
 
+def jp_named_maps(rom, primary_bank=0x25):
+    """JP-only named layout lookup using authored map indices.
+
+    Same entry structure as maps(), restricted to the names the build needs
+    (rc5_defs.maps.NAMES); no public disassembly trees are required.
+    """
+    from rc5_defs import maps as defs
+    result = {}
+    for name, (group, map_id) in defs.NAMES.items():
+        primary = file_offset(primary_bank, word(rom, primary_bank*0x4000 + (group-1)*2)) + (map_id-1)*9
+        header = rom[primary:primary+9]
+        secondary = file_offset(header[0], word(header, 3))
+        attrs = rom[secondary:secondary+12]
+        blockdata = file_offset(attrs[3], word(attrs, 4))
+        script = file_offset(attrs[6], word(attrs, 7))
+        events = file_offset(attrs[6], word(attrs, 9))
+        result[name] = dict(group=group, map_id=map_id, primary=primary,
+                            secondary=secondary, header=header, attrs=attrs,
+                            blockdata=blockdata, script=script, events=events,
+                            height=attrs[1], width=attrs[2], bank=attrs[6])
+    return result
+
+
+def jp_primary_header(rom, group, map_id, primary_bank=0x25):
+    """Read one original Japanese primary-table header by (group, map_id)."""
+    primary = file_offset(primary_bank, word(rom, primary_bank*0x4000 + (group-1)*2)) + (map_id-1)*9
+    return rom[primary:primary+9]
+
+
 def events(rom, offset):
     """Read all four counted event sections, retaining raw Japanese pointers."""
     result = {'filler': rom[offset:offset+2]}
