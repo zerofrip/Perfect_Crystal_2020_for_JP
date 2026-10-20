@@ -4,6 +4,27 @@
 
 **本リポジトリには ROM、画像、音声、抽出データ、または第三者のソースツリーは含まれていません。** 必要な入力ファイルと第三者ツールは、利用者がローカル環境で別途準備してください。
 
+## クイックスタート
+
+対象ROM
+
+Pocket Monsters - Crystal Version (Japan).gbc
+
+CRC32: 270C4ECC
+
+SHA256: 136ada06cb68656b7de475fa4b278d37dbeff8f5257e7dfdf7f4a4aec19a90f3
+
+https://github.com/zerofrip/Perfect_Crystal_2020_for_JP/releases/lastet/download/Perfect_Crystal_2020_for_JP.ips
+をダウンロード
+
+winips等のipsパッチソフトで日本語版ポケットモンスター クリスタルバージョンのROMにパッチを当てる
+
+※必ず自分で吸い出したROMで行うこと
+
+
+エミュレータや実機でプレイ
+
+
 ## 概要
 
 - ターゲット：日本語版ポケットモンスター クリスタルバージョン
